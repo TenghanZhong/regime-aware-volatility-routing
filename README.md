@@ -156,9 +156,6 @@ The routing layer works as follows:
 The script reports:
 
 - QLIKE on the variance scale
-- RMSE on the volatility scale
-- MAE on the volatility scale
-- underprediction rate
 - underprediction loss
 - tail underprediction loss
 - tail QLIKE
