@@ -62,7 +62,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 from sklearn.preprocessing import StandardScaler
 from tqdm.auto import tqdm
-
+import os
 # Optional dependencies
 try:
     from xgboost import XGBRegressor
@@ -88,12 +88,21 @@ except Exception:
 # =========================================================
 # Config
 # =========================================================
+from pathlib import Path
+from dataclasses import dataclass
+
+REPO_ROOT = Path(__file__).resolve().parent
+DEFAULT_DATA_DIR = REPO_ROOT / "data"
+DEFAULT_RESULTS_DIR = REPO_ROOT / "results"
+
 @dataclass
 class Config:
-    base_dir: str = r"C:\Users\26876\Desktop\Models_selections"
+    data_dir: str = os.environ.get("REGIME_ROUTING_DATA_DIR", str(DEFAULT_DATA_DIR))
+    results_dir: str = os.environ.get("REGIME_ROUTING_RESULTS_DIR", str(DEFAULT_RESULTS_DIR))
+
     panel_file: str = "multiasset_daily_10y_panel_model.csv"
     macro_file: str = "master_daily_features_macro_dailyonly_raw_only.csv"
-    out_dir_name: str = "diagnostics"
+
     symbol: str = "SPY"
 
     # target / feature choices
@@ -138,7 +147,7 @@ class Config:
     xgb_reg_lambda: float = 1.0
 
     # pool / policy
-    egarch_mode: str = "drop"  # {"drop", "active"}
+    egarch_mode: str = "drop"
     calm_top_m_cap: int = 1
     stress_top_m_cap: int = 2
     stress_prob_threshold: float = 0.55
@@ -467,13 +476,18 @@ def format_dm_summary_sentence(dm_df: pd.DataFrame, method_a: str, method_b: str
 # =========================================================
 # Data prep
 # =========================================================
-def load_inputs(cfg: Config) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    panel_path = Path(cfg.base_dir) / cfg.panel_file
-    macro_path = Path(cfg.base_dir) / cfg.macro_file
+def load_inputs(cfg: Config) -> tuple[pd.DataFrame, pd.DataFrame]:
+    data_dir = Path(cfg.data_dir)
+
+    panel_path = data_dir / cfg.panel_file
+    macro_path = data_dir / cfg.macro_file
+
     if not panel_path.exists():
         raise FileNotFoundError(f"Panel file not found: {panel_path}")
+
     if not macro_path.exists():
         raise FileNotFoundError(f"Macro file not found: {macro_path}")
+
     panel = pd.read_csv(panel_path, parse_dates=["date"])
     macro = pd.read_csv(macro_path, parse_dates=["date"])
     return panel, macro
