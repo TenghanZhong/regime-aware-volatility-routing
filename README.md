@@ -1,12 +1,60 @@
 # Regime-Aware Volatility Routing
 
-This repository contains code for a regime-aware specialist routing framework for next-day ETF volatility forecasting.
+Code and representative outputs for a regime-aware specialist routing framework for next-day ETF volatility forecasting.
 
-The implementation is designed as a rolling walk-forward backtest with a mixed model pool, risk-sensitive online model scoring, regime-aware routing, state-dependent forecast combination, routing diagnostics, and Diebold–Mariano tests.
+This repository implements a rolling walk-forward forecasting system that combines econometric and machine-learning specialists through risk-sensitive online scoring, state-dependent routing, and stress-aware forecast blending.
 
-## Main idea
+The framework is designed for next-day ETF realized-variance forecasting under changing market conditions, with particular emphasis on stressed-state robustness and protection against underprediction.
 
-The main script implements a pragmatic, paper-oriented backtest for:
+## Overview
+
+The repository supports four main components:
+
+- next-day ETF volatility / realized-variance forecasting
+- regime-aware specialist routing across calm and stressed states
+- cross-asset evaluation and summary aggregation
+- focused ablation on stress-aware routing components
+
+The implementation follows a rolling walk-forward design and reports both predictive accuracy and routing-behavior diagnostics.
+
+## Repository Structure
+
+- `run_regime_aware_routing.py`  
+  Main walk-forward backtest for regime-aware specialist routing, including:
+  - single-model forecasts
+  - adaptive baselines
+  - routing-set construction
+  - state-dependent forecast combination
+  - routing diagnostics
+  - Diebold–Mariano tests
+  - cross-asset batch aggregation
+
+- `ablation_stress_components.py.py`  
+  Focused ablation script for stress-aware design components.
+
+- `Plot.py`  
+  Figure-generation script for paper-ready plots and cross-asset visual summaries.
+
+- `data/`  
+  Input data directory containing:
+  - `multiasset_daily_10y_panel_model.csv`
+  - `master_daily_features_macro_dailyonly_raw_only.csv`
+
+- `Result/`  
+  Representative output directory currently containing:
+  - `cross_asset_method_aggregate.csv`
+  - `cross_asset_relative_aggregate.csv`
+
+- `LICENSE`  
+  Repository license.
+
+## Main Modeling Idea
+
+The framework treats next-day ETF volatility forecasting as a routing problem rather than a single-model selection problem.
+
+At each forecast date, candidate models are evaluated online using a risk-sensitive loss. Competitive models are retained in a routing set, then routed into calm and stress specialist branches. These branches are blended into a final overlay forecast using observable market-state information and a stress-dependent gating mechanism.
+
+The implementation supports:
 
 1. next-day realized variance / volatility forecasting
 2. candidate model pool:
@@ -14,64 +62,61 @@ The main script implements a pragmatic, paper-oriented backtest for:
    - GARCH-t
    - FIGARCH
    - GRU
-   - XGBoost (with sklearn fallback)
-   - optional EGARCH, dropped by default
-3. risk-sensitive best-model loss:
+   - XGBoost
+   - optional EGARCH
+3. risk-sensitive model scoring using:
    - `QLIKE + lambda_under * UnderPenalty`
-4. rolling-best and static-best baselines
-5. naive VIX-switch baseline:
-   - if `VIX > threshold`, use GARCH-t
-   - otherwise, use GRU
-6. regime-aware online model scoring with local-shrunk tau calibration
-7. two-sided state-gated blend policy:
-   - low-state branch blends `rolling_best` and calm specialist
-   - high-state branch blends `combo` and stress specialist
-   - `omega_t` blends low/high branches
-   - HAR acts as a conditional floor in stressed / high-dispersion states
-8. regime-conditional aggregation:
-   - calm specialist pool: GRU / HAR / XGBoost
-   - stress specialist pool: GARCH-t / FIGARCH / HAR
-9. routing diagnostics:
-   - compact 4-metric regime table
-   - detailed specialist day-usage table
-10. cross-asset Diebold–Mariano tests with Newey–West HAC variance
+4. adaptive baselines:
+   - static-best
+   - rolling-best
+   - naive VIX-switch
+5. regime-aware routing-set construction
+6. calm / stress specialist aggregation
+7. low-state / high-state branch blending
+8. conditional HAR floor
+9. routing diagnostics
+10. asset-level Diebold–Mariano tests with Newey–West HAC variance
 
-## Method overview
+## Target Construction
 
-The backtest constructs the next-day variance target and forecasting features internally.
+The forecasting target is built internally from the ETF panel.
 
-### Target construction
-
-From the panel file, the script builds the target as:
+For each date:
 
 - `rv_var = gk_proxy^2`
 - `rv_vol = sqrt(rv_var)`
 - `y_next_var = rv_var shifted by -1`
 - `y_next_vol = sqrt(y_next_var)`
 
-QLIKE is evaluated on the variance scale, while RMSE and MAE are also reported on the corresponding volatility scale.
+QLIKE is evaluated on the variance scale.  
+RMSE and MAE are also reported on the corresponding volatility scale.
 
-### Forecasting features
+## Feature Construction
 
-The implementation builds features such as:
+The code constructs forecasting inputs internally from the panel and macro files.
 
+### ETF / volatility features
 - HAR-style variance inputs
 - lagged variance terms
-- return lags and absolute-return lags
-- rolling variance means and standard deviations
+- return lags
+- absolute-return lags
+- rolling variance means
+- rolling variance standard deviations
 - log-variance features
 - volatility-of-volatility features
-- rolling volatility and EWMA volatility
-- macro-financial state features:
-  - `log_vix`
-  - `log_vix_vxv`
-  - `d5_log_vix`
-  - `term_spread`
-  - `hy_oas`
-  - `vix_raw`
-- a 20-day rolling volatility summary `rv20d`
+- rolling volatility features
+- EWMA volatility
 
-### Default configuration
+### Macro-financial state features
+- `log_vix`
+- `log_vix_vxv`
+- `d5_log_vix`
+- `term_spread`
+- `hy_oas`
+- `vix_raw`
+- `rv20d`
+
+## Default Configuration
 
 Important defaults in the current implementation include:
 
@@ -89,86 +134,89 @@ Important defaults in the current implementation include:
 - naive VIX-switch threshold: `20.0`
 - calm top-m cap: `1`
 - stress top-m cap: `2`
-- upper quantile for stress aggregation: `0.75`
+- stress aggregation quantile: `0.75`
 - winsorization bounds: `0.10` and `0.90`
 - HAR floor stress threshold: `0.65`
 - HAR floor dispersion threshold: `0.20`
 - random seed: `42`
 
-### Supported model pool
+## Supported Methods
 
-The backtest supports the following models:
-
-- `har`
-- `garch_t`
-- `figarch`
-- `gru`
-- `xgb`
-
-Optional:
-
-- `egarch`
-
-The internal model-pool logic allows `egarch` to be either dropped or activated depending on configuration.
-
-### Methods compared
-
-The backtest includes the following benchmark and policy outputs.
-
-**Single-model comparators**
+### Single-model forecasters
 - HAR-RV
 - GARCH-t
 - FIGARCH
 - GRU
 - XGBoost
 
-**Adaptive baselines**
+Optional:
+- EGARCH
+
+### Adaptive baselines
 - static-best
 - rolling-best
 - naive VIX-switch
 
-**Routing outputs**
+### Routing outputs
 - calm branch
 - stress branch
 - regime-conditional combo branch
 - low-state branch
 - high-state branch
-- final overlay / routed forecast
+- final overlay forecast
 
-### Routing logic
+## Routing Logic
 
 The routing layer works as follows:
 
-1. Each active model is scored online using recent excess loss relative to the best active model.
-2. The score uses time decay and regime similarity.
-3. A local-shrunk threshold `tau_t` is calibrated using recent routing scores.
-4. A routing set is selected by retaining models whose scores remain close to recent competitive levels.
-5. Calm and stress specialist branches are built from model pools:
-   - calm: `gru`, `har`, `xgb`
-   - stress: `garch_t`, `figarch`, `har`
-6. A stress probability is computed from the standardized market-state vector.
-7. Calm and stress branch forecasts are combined.
-8. A second gate blends the low-state and high-state branches.
-9. A conditional HAR floor is applied in stressed or high-dispersion conditions.
+1. each active model is scored online using recent excess loss relative to the best active model
+2. scores are weighted by both time decay and regime similarity
+3. a local-shrunk threshold `tau_t` is calibrated from recent routing scores
+4. a routing set is formed by retaining models that remain competitive under the current state
+5. calm and stress specialist branches are built from pre-specified pools
+6. a stress probability is computed from the standardized market-state vector
+7. calm and stress forecasts are combined
+8. a second gate blends low-state and high-state branches
+9. a conditional HAR floor is applied in stressed or high-dispersion conditions
 
-### Evaluation metrics
+### Specialist pools
+- calm pool: `gru`, `har`, `xgb`
+- stress pool: `garch_t`, `figarch`, `har`
 
-The script reports:
+## Evaluation Metrics
 
+The implementation reports:
+
+### Forecasting metrics
 - QLIKE on the variance scale
 - underprediction loss
 - tail underprediction loss
 - tail QLIKE
+- RMSE on the volatility scale
+- MAE on the volatility scale
 
-For routing behavior, the script reports:
-
+### Routing diagnostics
 - calm-branch usage rate
 - stress-branch usage rate
 - selected regret
 - miss-best rate
 
-It also computes asset-level Diebold–Mariano tests using a Newey–West HAC variance estimate.
+### Statistical comparison
+- asset-level Diebold–Mariano tests
+- Newey–West HAC variance estimate for loss differentials
 
+## Data Layout
 
+The repository expects the two input files under `data/`:
 
+- `data/multiasset_daily_10y_panel_model.csv`
+- `data/master_daily_features_macro_dailyonly_raw_only.csv`
 
+## Environment Setup
+
+Create a clean Python environment and install the core dependencies.
+
+### Option 1: virtual environment
+
+```bash
+python -m venv .venv
