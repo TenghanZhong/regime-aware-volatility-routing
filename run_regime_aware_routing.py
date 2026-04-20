@@ -1208,7 +1208,7 @@ def compute_routing_diagnostics(
 # =========================================================
 def run_backtest(cfg: Config) -> Dict[str, object]:
     set_seed(cfg.seed)
-    out_dir = Path(cfg.base_dir) / cfg.out_dir_name
+    out_dir = Path(cfg.results_dir)
     ensure_dir(out_dir)
 
     stored_model_names, active_model_names = get_model_pools(cfg)
@@ -1218,7 +1218,8 @@ def run_backtest(cfg: Config) -> Dict[str, object]:
     if cfg.verbose:
         print("=" * 90)
         print("Regime-Aware Online Model Prediction Set Backtest — Final Corrected Version")
-        print(f"base_dir        = {cfg.base_dir}")
+        print(f"data_dir        = {cfg.data_dir}")
+        print(f"results_dir     = {cfg.results_dir}")
         print(f"symbol          = {cfg.symbol}")
         print(f"HAS_ARCH        = {HAS_ARCH}, HAS_XGB = {HAS_XGB}, HAS_TORCH = {HAS_TORCH}")
         print(f"EGARCH mode     = {cfg.egarch_mode}")
