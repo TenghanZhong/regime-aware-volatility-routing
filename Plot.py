@@ -16,13 +16,7 @@ Expected input files in input_dir:
     - cross_asset_relative_aggregate.csv
     - cross_asset_relative_to_baselines.csv
 
-Default input path:
-    C:\Users\26876\Desktop\Models_selections\regime_overlay_cross_asset_ablation
 
-Example
--------
-python regime_conference_figures_v2.py
-python regime_conference_figures_v2.py --input-dir "C:\Users\26876\Desktop\Models_selections\regime_overlay_cross_asset_ablation"
 """
 
 from __future__ import annotations
@@ -31,6 +25,8 @@ import argparse
 from pathlib import Path
 from typing import Dict, Iterable, List
 
+import os
+from pathlib import Path
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -51,7 +47,13 @@ plt.rcParams["ytick.labelsize"] = 9
 plt.rcParams["axes.spines.top"] = False
 plt.rcParams["axes.spines.right"] = False
 
-DEFAULT_INPUT_DIR = r"C:\Users\26876\Desktop\Models_selections\regime_overlay_cross_asset_ablation"
+REPO_ROOT = Path(__file__).resolve().parent
+DEFAULT_INPUT_DIR = Path(
+    os.environ.get(
+        "REGIME_ROUTING_FIG_INPUT_DIR",
+        REPO_ROOT / "results"
+    )
+)
 DEFAULT_OUTPUT_SUBDIR = "conference_figures"
 
 ASSET_ORDER = ["EEM", "GLD", "IWM", "QQQ", "SPY", "TLT"]
@@ -97,7 +99,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument(
         "--input-dir",
         type=str,
-        default=DEFAULT_INPUT_DIR,
+        default=str(DEFAULT_INPUT_DIR),
         help="Directory containing the cross-asset CSV result files.",
     )
     p.add_argument(
