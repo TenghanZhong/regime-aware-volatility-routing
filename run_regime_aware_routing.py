@@ -1831,7 +1831,7 @@ def safe_slug(name: str) -> str:
 
 
 def discover_assets(cfg: Config) -> List[str]:
-    panel_path = Path(cfg.base_dir) / cfg.panel_file
+    panel_path = Path(cfg.data_dir) / cfg.panel_file
     if not panel_path.exists():
         raise FileNotFoundError(f"Panel file not found: {panel_path}")
     df = pd.read_csv(panel_path, usecols=["symbol"])
@@ -2148,7 +2148,7 @@ def run_cross_asset_ablation_batch(
     continue_on_error: bool = True,
 ) -> Dict[str, pd.DataFrame]:
     ablation_specs = build_ablation_specs()
-    batch_out_dir = Path(base_cfg.base_dir) / batch_out_dir_name
+    batch_out_dir = Path(base_cfg.results_dir) / batch_out_dir_name
     ensure_dir(batch_out_dir)
 
     records: List[Dict[str, object]] = []
@@ -2173,7 +2173,7 @@ def run_cross_asset_ablation_batch(
                 "status": "failed",
                 "error_message": f"{type(e).__name__}: {e}",
                 "traceback": traceback.format_exc(),
-                "out_dir": str(Path(base_cfg.base_dir) / batch_out_dir_name / safe_slug(asset) / safe_slug(ablation_name)),
+                "out_dir": str(Path(base_cfg.results_dir) / batch_out_dir_name / safe_slug(asset) / safe_slug(ablation_name)),
                 "summary_out": "",
                 "config_out": "",
                 "config_payload": {},
@@ -2192,7 +2192,8 @@ def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
         description="Regime-aware online model set backtest with corrected routing diagnostics, naive VIX-switch baseline, and cross-asset DM tests."
     )
-    p.add_argument("--base-dir", type=str, default=None)
+    p.add_argument("--data-dir", type=str, default=None)
+    p.add_argument("--results-dir", type=str, default=None)
     p.add_argument("--panel-file", type=str, default=None)
     p.add_argument("--macro-file", type=str, default=None)
     p.add_argument("--symbol", type=str, default="SPY")
@@ -2231,8 +2232,10 @@ def main() -> None:
 
     cfg = Config()
 
-    if args.base_dir is not None:
-        cfg.base_dir = args.base_dir
+    if args.data_dir is not None:
+        cfg.data_dir = args.data_dir
+    if args.results_dir is not None:
+        cfg.results_dir = args.results_dir
     if args.panel_file is not None:
         cfg.panel_file = args.panel_file
     if args.macro_file is not None:
@@ -2363,7 +2366,7 @@ def main() -> None:
             if sentence_vs:
                 print(sentence_vs)
 
-        batch_out = Path(cfg.base_dir) / args.batch_out_dir_name
+        batch_out = Path(cfg.results_dir) / args.batch_out_dir_name
         print("\nSaved files:")
         for name in [
             "batch_manifest.csv",
