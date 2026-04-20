@@ -29,7 +29,7 @@ The implementation follows a rolling walk-forward design and reports both predic
   - Diebold–Mariano tests
   - cross-asset batch aggregation
 
-- `ablation_stress_components.py.py`  
+- `ablation_stress_components.py`  
   Focused ablation script for stress-aware design components.
 
 - `Plot.py`  
