@@ -2304,10 +2304,11 @@ def main() -> None:
 
         print("=" * 100)
         print("Cross-Asset + Ablation Batch Mode")
-        print(f"base_dir     = {cfg.base_dir}")
+        print(f"data_dir     = {cfg.data_dir}")
+        print(f"results_dir  = {cfg.results_dir}")
         print(f"assets       = {assets}")
         print(f"ablations    = {requested_ablations}")
-        print(f"batch_out    = {Path(cfg.base_dir) / args.batch_out_dir_name}")
+        print(f"batch_out    = {Path(cfg.results_dir) / args.batch_out_dir_name}")
         print("=" * 100)
 
         outputs = run_cross_asset_ablation_batch(
