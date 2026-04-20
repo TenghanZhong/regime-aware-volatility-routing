@@ -48,10 +48,7 @@ plt.rcParams["axes.spines.right"] = False
 
 REPO_ROOT = Path(__file__).resolve().parent
 DEFAULT_INPUT_DIR = Path(
-    os.environ.get(
-        "REGIME_ROUTING_FIG_INPUT_DIR",
-        REPO_ROOT / "results"
-    )
+    os.environ.get("REGIME_ROUTING_FIG_INPUT_DIR", REPO_ROOT / "Result")
 )
 DEFAULT_OUTPUT_SUBDIR = "conference_figures"
 

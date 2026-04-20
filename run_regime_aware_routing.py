@@ -93,7 +93,7 @@ from dataclasses import dataclass
 
 REPO_ROOT = Path(__file__).resolve().parent
 DEFAULT_DATA_DIR = REPO_ROOT / "data"
-DEFAULT_RESULTS_DIR = REPO_ROOT / "results"
+DEFAULT_RESULTS_DIR = REPO_ROOT / "Result"
 
 @dataclass
 class Config:
@@ -1897,7 +1897,7 @@ def run_one_batch_job(
 
     bt_result = run_backtest(cfg)
 
-    out_dir = Path(cfg.base_dir) / cfg.out_dir_name
+    out_dir = Path(cfg.results_dir)
     summary_out = out_dir / "summary_metrics.csv"
     config_out = out_dir / "config_used.json"
     model_out = out_dir / "model_level_metrics.csv"

@@ -54,7 +54,7 @@ import warnings
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple
-
+import os
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import GradientBoostingRegressor
@@ -88,12 +88,19 @@ except Exception:
 # =========================================================
 # Config
 # =========================================================
+
+
+REPO_ROOT = Path(__file__).resolve().parent
+DEFAULT_DATA_DIR = REPO_ROOT / "data"
+DEFAULT_RESULTS_DIR = REPO_ROOT / "Result"
+
 @dataclass
 class Config:
-    base_dir: str = r"C:\Users\26876\Desktop\Models_selections"
+    data_dir: str = os.environ.get("REGIME_ROUTING_DATA_DIR", str(DEFAULT_DATA_DIR))
+    results_dir: str = os.environ.get("REGIME_ROUTING_RESULTS_DIR", str(DEFAULT_RESULTS_DIR))
+
     panel_file: str = "multiasset_daily_10y_panel_model.csv"
     macro_file: str = "master_daily_features_macro_dailyonly_raw_only.csv"
-    out_dir_name: str = "diagnostics"
     symbol: str = "SPY"
 
     # target / feature choices
@@ -469,12 +476,16 @@ def format_dm_summary_sentence(dm_df: pd.DataFrame, method_a: str, method_b: str
 # Data prep
 # =========================================================
 def load_inputs(cfg: Config) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    panel_path = Path(cfg.base_dir) / cfg.panel_file
-    macro_path = Path(cfg.base_dir) / cfg.macro_file
+    data_dir = Path(cfg.data_dir)
+
+    panel_path = data_dir / cfg.panel_file
+    macro_path = data_dir / cfg.macro_file
+
     if not panel_path.exists():
         raise FileNotFoundError(f"Panel file not found: {panel_path}")
     if not macro_path.exists():
         raise FileNotFoundError(f"Macro file not found: {macro_path}")
+
     panel = pd.read_csv(panel_path, parse_dates=["date"])
     macro = pd.read_csv(macro_path, parse_dates=["date"])
     return panel, macro
@@ -1195,7 +1206,7 @@ def compute_routing_diagnostics(
 # =========================================================
 def run_backtest(cfg: Config) -> Dict[str, object]:
     set_seed(cfg.seed)
-    out_dir = Path(cfg.base_dir) / cfg.out_dir_name
+    out_dir = Path(cfg.results_dir)
     ensure_dir(out_dir)
 
     stored_model_names, active_model_names = get_model_pools(cfg)
@@ -1205,7 +1216,8 @@ def run_backtest(cfg: Config) -> Dict[str, object]:
     if cfg.verbose:
         print("=" * 90)
         print("Regime-Aware Online Model Prediction Set Backtest — Final Corrected Version")
-        print(f"base_dir        = {cfg.base_dir}")
+        print(f"data_dir        = {cfg.data_dir}")
+        print(f"results_dir     = {cfg.results_dir}")
         print(f"symbol          = {cfg.symbol}")
         print(f"HAS_ARCH        = {HAS_ARCH}, HAS_XGB = {HAS_XGB}, HAS_TORCH = {HAS_TORCH}")
         print(f"EGARCH mode     = {cfg.egarch_mode}")
@@ -1821,9 +1833,10 @@ def safe_slug(name: str) -> str:
 
 
 def discover_assets(cfg: Config) -> List[str]:
-    panel_path = Path(cfg.base_dir) / cfg.panel_file
+    panel_path = Path(cfg.data_dir) / cfg.panel_file
     if not panel_path.exists():
         raise FileNotFoundError(f"Panel file not found: {panel_path}")
+
     df = pd.read_csv(panel_path, usecols=["symbol"])
     symbols = sorted(pd.Series(df["symbol"].dropna().astype(str).unique()).tolist())
     preferred = [s for s in DEFAULT_ASSET_ORDER if s in symbols]
@@ -1871,12 +1884,17 @@ def run_one_batch_job(
 ) -> Dict[str, object]:
     cfg = copy.deepcopy(base_cfg)
     cfg.symbol = asset
-    cfg.out_dir_name = f"{safe_slug(batch_root_name)}/{safe_slug(asset)}/{safe_slug(ablation_name)}"
+    cfg.results_dir = str(
+        Path(base_cfg.results_dir)
+        / safe_slug(batch_root_name)
+        / safe_slug(asset)
+        / safe_slug(ablation_name)
+    )
     apply_overrides(cfg, overrides)
 
     bt_result = run_backtest(cfg)
 
-    out_dir = Path(cfg.base_dir) / cfg.out_dir_name
+    out_dir = Path(cfg.results_dir)
     summary_out = out_dir / "summary_metrics.csv"
     config_out = out_dir / "config_used.json"
     model_out = out_dir / "model_level_metrics.csv"
@@ -2127,7 +2145,7 @@ def run_cross_asset_ablation_batch(
     continue_on_error: bool = True,
 ) -> Dict[str, pd.DataFrame]:
     ablation_specs = build_ablation_specs()
-    batch_out_dir = Path(base_cfg.base_dir) / batch_out_dir_name
+    batch_out_dir = Path(base_cfg.results_dir) / batch_out_dir_name
     ensure_dir(batch_out_dir)
 
     records: List[Dict[str, object]] = []
@@ -2152,7 +2170,12 @@ def run_cross_asset_ablation_batch(
                 "status": "failed",
                 "error_message": f"{type(e).__name__}: {e}",
                 "traceback": traceback.format_exc(),
-                "out_dir": str(Path(base_cfg.base_dir) / batch_out_dir_name / safe_slug(asset) / safe_slug(ablation_name)),
+                "out_dir": str(
+                    Path(base_cfg.results_dir)
+                    / batch_out_dir_name
+                    / safe_slug(asset)
+                    / safe_slug(ablation_name)
+                ),
                 "summary_out": "",
                 "config_out": "",
                 "config_payload": {},
@@ -2171,7 +2194,8 @@ def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
         description="Regime-aware online model set backtest with corrected routing diagnostics, naive VIX-switch baseline, and cross-asset DM tests."
     )
-    p.add_argument("--base-dir", type=str, default=None)
+    p.add_argument("--data-dir", type=str, default=None)
+    p.add_argument("--results-dir", type=str, default=None)
     p.add_argument("--panel-file", type=str, default=None)
     p.add_argument("--macro-file", type=str, default=None)
     p.add_argument("--symbol", type=str, default="SPY")
@@ -2210,8 +2234,10 @@ def main() -> None:
 
     cfg = Config()
 
-    if args.base_dir is not None:
-        cfg.base_dir = args.base_dir
+    if args.data_dir is not None:
+        cfg.data_dir = args.data_dir
+    if args.results_dir is not None:
+        cfg.results_dir = args.results_dir
     if args.panel_file is not None:
         cfg.panel_file = args.panel_file
     if args.macro_file is not None:
@@ -2283,10 +2309,11 @@ def main() -> None:
 
         print("=" * 100)
         print("Cross-Asset + Ablation Batch Mode")
-        print(f"base_dir     = {cfg.base_dir}")
+        print(f"data_dir     = {cfg.data_dir}")
+        print(f"results_dir  = {cfg.results_dir}")
         print(f"assets       = {assets}")
         print(f"ablations    = {requested_ablations}")
-        print(f"batch_out    = {Path(cfg.base_dir) / args.batch_out_dir_name}")
+        print(f"batch_out    = {Path(cfg.results_dir) / args.batch_out_dir_name}")
         print("=" * 100)
 
         outputs = run_cross_asset_ablation_batch(
@@ -2341,7 +2368,7 @@ def main() -> None:
             if sentence_vs:
                 print(sentence_vs)
 
-        batch_out = Path(cfg.base_dir) / args.batch_out_dir_name
+        batch_out = Path(cfg.results_dir) / args.batch_out_dir_name
         print("\nSaved files:")
         for name in [
             "batch_manifest.csv",
