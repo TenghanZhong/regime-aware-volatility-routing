@@ -1174,12 +1174,10 @@ def compute_routing_diagnostics(
             "avg_selected_regret": safe_mean(sub["regime_selected_regret"].values.astype(float)),
             "miss_best_rate": safe_mean(miss_best),
             "interpretation": (
-                "These usage frequencies measure whether the calm/stress branch "
-                "actually inherits at least one model from the routing set, "
-                "rather than being populated only by fallback specialists. "
-                "Nonzero miss_best_rate with low selected regret means routing "
-                "filters to a competitive set rather than perfectly identifying "
-                "the ex post daily winner."
+                "Usage frequencies are the fraction of days on which a branch "
+                "includes at least one member of the routing set. "
+                "miss_best_rate is the fraction of eligible days on which "
+                "the ex post best model is absent from that set."
             ),
         }
         rows_compact.append(compact_row)

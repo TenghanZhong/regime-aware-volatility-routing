@@ -362,7 +362,7 @@ def plot_figure2_winner_heatmap(
             values=mean_rank.values,
             row_labels=[method_label(m) for m in mean_rank.index],
             col_labels=[r.capitalize() for r in mean_rank.columns],
-            title=f"Bonus. Regime-conditioned mean-rank heatmap ({ablation} design)",
+            title=f"Supplementary. Regime-conditioned mean-rank heatmap ({ablation} design)",
             outpath=outpath_bonus_mean_rank,
             value_fmt="{:.2f}",
             cmap="viridis_r",
