@@ -33,7 +33,7 @@ The implementation follows a rolling walk-forward design and reports both predic
   Focused ablation script for stress-aware design components.
 
 - `Plot.py`  
-  Figure-generation script for paper-ready plots and cross-asset visual summaries.
+  Figure-generation script for cross-asset visual summaries.
 
 - `data/`  
   Input data directory containing:
@@ -216,7 +216,62 @@ The repository expects the two input files under `data/`:
 
 Create a clean Python environment and install the core dependencies.
 
-### Option 1: virtual environment
+### Virtual environment
 
 ```bash
 python -m venv .venv
+```
+
+Activate the environment with `source .venv/bin/activate` on macOS/Linux or
+`.venv\Scripts\Activate.ps1` in Windows PowerShell, then install the core packages:
+
+```bash
+python -m pip install numpy pandas scikit-learn tqdm matplotlib
+```
+
+The full candidate pool additionally uses XGBoost, ARCH models, and PyTorch:
+
+```bash
+python -m pip install xgboost arch torch
+```
+
+Without XGBoost, the code uses scikit-learn's gradient-boosting fallback.
+Without `arch` or PyTorch, the corresponding ARCH-family or GRU forecasts use
+recent-mean variance fallbacks. Use the full dependencies to evaluate the named
+specialist models, and retain the dependency-availability fields in run metadata.
+
+## Running the Backtest
+
+Run one asset and write new outputs to a separate directory:
+
+```bash
+python run_regime_aware_routing.py --single-asset-mode --symbol SPY --results-dir Result/rebuilt_spy
+```
+
+For the cross-asset batch and its configured ablations:
+
+```bash
+python ablation_stress_components.py --batch-mode --results-dir Result/rebuilt_cross_asset
+```
+
+The input directory defaults to `data/`. Use `--data-dir` to select another
+directory containing the two documented input CSV files. Running either backtest
+script without arguments selects cross-asset batch mode. To inspect all supported
+options before running:
+
+```bash
+python run_regime_aware_routing.py --help
+python ablation_stress_components.py --help
+python Plot.py --help
+```
+
+## Rebuilding Figures
+
+The two aggregate files in `Result/` are representative outputs. `Plot.py`
+requires all four cross-asset tables listed in its module documentation; a full
+batch run writes them under `regime_overlay_cross_asset_ablation/` in the selected
+results directory. After that run:
+
+```bash
+python Plot.py --input-dir Result/rebuilt_cross_asset/regime_overlay_cross_asset_ablation --output-dir Result/rebuilt_figures
+```

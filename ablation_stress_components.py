@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Regime-Aware Online Model Prediction Set Backtest — Final Corrected Version
+Regime-Aware Specialist-Routing Backtest
 ===========================================================================
 
 Main idea
 ---------
-This script implements a pragmatic, paper-ready backtest for:
+This script implements a walk-forward backtest for:
 1. Next-day realized variance / volatility forecasting
 2. Candidate model pool:
    - HAR-RV
@@ -15,7 +15,7 @@ This script implements a pragmatic, paper-ready backtest for:
    - GRU
    - XGBoost (with sklearn fallback)
    - EGARCH optional, dropped by default
-3. Route-B risk-sensitive best-model definition:
+3. Risk-sensitive best-model definition:
    L = QLIKE + lambda_under * UnderPenalty
 4. Rolling-best and static-best baselines
 5. Naive VIX-switch baseline:
@@ -525,7 +525,7 @@ def prepare_symbol_dataset(panel: pd.DataFrame, macro: pd.DataFrame, cfg: Config
     df["vol_of_vol_20"] = df["rv_vol"].rolling(20).std().shift(0)
     df["ret_sq"] = df["ret"] ** 2
 
-    # ---- Missing volatility features: now explicitly created ----
+    # ---- Construct volatility features ----
     df["rolling_vol_5"] = df["ret"].rolling(5).std().shift(0)
     df["rolling_vol_10"] = df["ret"].rolling(10).std().shift(0)
     df["rolling_vol_20"] = df["ret"].rolling(20).std().shift(0)
@@ -1152,7 +1152,7 @@ def compute_routing_diagnostics(
             dtype=float,
         )
 
-        # New compact usage-frequency definitions:
+        # Compact usage-frequency definitions:
         # whether the branch actually uses at least one model from the routing set
         calm_from_routing = sub.apply(
             lambda row: branch_uses_routing_set(row["calm_members"], row["regime_set"]),
@@ -1215,7 +1215,7 @@ def run_backtest(cfg: Config) -> Dict[str, object]:
 
     if cfg.verbose:
         print("=" * 90)
-        print("Regime-Aware Online Model Prediction Set Backtest — Final Corrected Version")
+        print("Regime-Aware Specialist-Routing Backtest")
         print(f"data_dir        = {cfg.data_dir}")
         print(f"results_dir     = {cfg.results_dir}")
         print(f"symbol          = {cfg.symbol}")
@@ -1744,10 +1744,10 @@ def run_backtest(cfg: Config) -> Dict[str, object]:
             "detailed": "day-level specialist usage frequencies within calm/stress branches",
         },
         "notes": [
-            "Missing rolling_vol and ewma_vol features are now explicitly created.",
+            "rolling_vol and ewma_vol features are constructed during preprocessing.",
             "VIX-switch baseline uses raw VIX > threshold -> GARCH-t, else GRU.",
             "Routing diagnostics are day-level usage frequencies, not member-share composition.",
-            "DM summary should count only cases where p < 0.05 and the statistic favors overlay.",
+            "Reported favorable DM comparisons require p < 0.05 and a statistic favoring the overlay.",
         ],
     }
 
@@ -2192,7 +2192,7 @@ def run_cross_asset_ablation_batch(
 # =========================================================
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
-        description="Regime-aware online model set backtest with corrected routing diagnostics, naive VIX-switch baseline, and cross-asset DM tests."
+        description="Regime-aware online model set backtest with routing diagnostics, naive VIX-switch baseline, and cross-asset DM tests."
     )
     p.add_argument("--data-dir", type=str, default=None)
     p.add_argument("--results-dir", type=str, default=None)
@@ -2362,7 +2362,7 @@ def main() -> None:
 
             sentence_rb = format_dm_summary_sentence(dm_df, "regime_overlay", "rolling_best")
             sentence_vs = format_dm_summary_sentence(dm_df, "regime_overlay", "vix_switch")
-            print("\nReady-to-use DM sentences:")
+            print("\nDM comparison summary:")
             if sentence_rb:
                 print(sentence_rb)
             if sentence_vs:

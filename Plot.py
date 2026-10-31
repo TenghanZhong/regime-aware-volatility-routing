@@ -4,11 +4,10 @@
 r"""
 Conference-paper figure script for the regime-aware specialist forecasting paper.
 
-Updated version:
-- Figure 1 is simplified to a clean 5-step schematic.
-- Figure 3 is split into two separate figures:
-    * Figure 3a: main 5-asset comparison excluding TLT
-    * Figure 3b: TLT robustness only
+Figure layout:
+- Figure 1: five-step method schematic.
+- Figure 3a: five-asset comparison excluding TLT.
+- Figure 3b: TLT robustness panel.
 
 Expected input files in input_dir:
     - cross_asset_method_aggregate.csv
@@ -91,7 +90,7 @@ WINNER_METHOD_ORDER = [
 # I/O and helpers
 # =========================================================
 def parse_args() -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="Generate simplified conference-ready figures.")
+    p = argparse.ArgumentParser(description="Generate cross-asset routing figures.")
     p.add_argument(
         "--input-dir",
         type=str,
@@ -448,17 +447,16 @@ def plot_figure3b_tlt_robustness(rel_detail: pd.DataFrame, ablation: str, outpat
     ax.set_xticklabels(labels)
     ax.grid(axis="y", alpha=0.25)
 
-    # 不要图内标题，交给 LaTeX caption
-    # ax.set_title(...)
+    # The title is supplied by the LaTeX figure caption.
 
-    # 给上下留一点呼吸空间，但不要太高
+    # Leave space above and below the plotted values.
     positive_vals = vals[np.isfinite(vals) & (vals > 0)]
     if len(positive_vals) > 0:
         ymin = min(positive_vals.min() * 0.6, 0.2)
         ymax = positive_vals.max() * 1.6
         ax.set_ylim(ymin, ymax)
 
-    # 顶部数字简洁一点
+    # Format the value labels compactly.
     for b, v in zip(bars, vals):
         if np.isfinite(v) and v > 0:
             label = f"{v:.2e}" if v >= 1000 else f"{v:.3f}"
@@ -472,9 +470,7 @@ def plot_figure3b_tlt_robustness(rel_detail: pd.DataFrame, ablation: str, outpat
                 clip_on=False,
             )
 
-    # 不要图内底部说明，交给 LaTeX caption
-    # note = "Overlay remains finite while HAR and rolling-best blow up on TLT."
-    # ax.text(...)
+    # The interpretation is supplied by the LaTeX figure caption.
 
     fig.tight_layout()
     save_fig(fig, outpath)
